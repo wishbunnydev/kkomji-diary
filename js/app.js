@@ -33,7 +33,8 @@ const DB = {
 const S = {
   tab: 'home', view: null, lang: 'ko', child: '', entries: [], draft: null, parentOK: false,
   diaryMode: 'cal', ym: null, season: 'all', detailId: null, showOriginal: false, justDone: false,
-  aiStyle: 'kid', tool: { kind: 'crayon', color: '#ED6CA6', size: 1 }, up: null, modal: null, book: null, listening: false
+  aiStyle: 'kid', tool: { kind: 'crayon', color: '#ED6CA6', size: 1 }, up: null, modal: null, book: null, listening: false,
+  rw: { stickers: {}, promise: '', poster: null }, reward: null, rwBack: null
 };
 const T = (ko, en) => (S.lang === 'en' ? en : ko);
 const $ = (q) => document.querySelector(q);
@@ -142,12 +143,57 @@ const STYLES = [
   { id: 'doodle', ko: '쓱쓱 낙서', en: 'Quick Doodle', dko: '펜으로 쓱쓱 그린 선 그림', den: 'Loose pen-line drawing' }
 ];
 
+// ---------- 리워드: 칭찬 도장판 · 스티커북 ----------
+// 하루에 일기 한 편 = 도장 1개 + 스티커 1장. 도장 10개면 황금 스티커와 약속 선물, 스티커 20장을 다 모으면 포스터 선물권.
+const STICKERS = [
+  { id: 'flower', ko: '꽃', en: 'Flower', svg: '<g fill="#ED6CA6"><circle cx="24" cy="13" r="7"/><circle cx="34.5" cy="20.6" r="7"/><circle cx="30.5" cy="33" r="7"/><circle cx="17.5" cy="33" r="7"/><circle cx="13.5" cy="20.6" r="7"/></g><circle cx="24" cy="24" r="6" fill="#FFC92B"/>' },
+  { id: 'sun', ko: '해님', en: 'Sun', svg: '<circle cx="24" cy="24" r="10" fill="#FFC92B"/><path d="M24 5v5M24 38v5M5 24h5M38 24h5M10.5 10.5l3.5 3.5M34 34l3.5 3.5M37.5 10.5L34 14M14 34l-3.5 3.5" fill="none"/>' },
+  { id: 'rainbow', ko: '무지개', en: 'Rainbow', svg: '<path d="M6 36a18 18 0 0 1 36 0" fill="none" stroke="#E5413A" stroke-width="5"/><path d="M11 36a13 13 0 0 1 26 0" fill="none" stroke="#FFC92B" stroke-width="5"/><path d="M16 36a8 8 0 0 1 16 0" fill="none" stroke="#3168E8" stroke-width="5"/>' },
+  { id: 'star', ko: '별', en: 'Star', svg: '<path d="M24 7L28.7 18.5 41.1 19.4 31.6 27.5 34.6 39.6 24 33 13.4 39.6 16.4 27.5 6.9 19.4 19.3 18.5Z" fill="#FFC92B"/>' },
+  { id: 'heart', ko: '하트', en: 'Heart', svg: '<path d="M24 41C9 30 6 20 10 14c4-6 11-4 14 2 3-6 10-8 14-2 4 6 1 16-14 27Z" fill="#FF8768"/>' },
+  { id: 'cloud', ko: '구름', en: 'Cloud', svg: '<path d="M14 36q-9 0-9-8 0-8 9-7 2-9 12-8 9 0 10 9 8 0 8 7 0 7-8 7Z" fill="#E3F2FB"/><path d="M19 28q5 4 10 0" fill="none"/>' },
+  { id: 'butterfly', ko: '나비', en: 'Butterfly', svg: '<ellipse cx="15" cy="18" rx="9" ry="8" fill="#A987DC"/><ellipse cx="33" cy="18" rx="9" ry="8" fill="#A987DC"/><ellipse cx="17" cy="32" rx="7" ry="6" fill="#ED6CA6"/><ellipse cx="31" cy="32" rx="7" ry="6" fill="#ED6CA6"/><path d="M24 12v26M24 12l-4-6M24 12l4-6" fill="none"/>' },
+  { id: 'cat', ko: '고양이', en: 'Cat', svg: '<path d="M9 22L10 7l10 7M39 22L38 7l-10 7" fill="#FFC92B"/><circle cx="24" cy="26" r="15" fill="#FFC92B"/><circle cx="18" cy="24" r="1.8" fill="#453E39"/><circle cx="30" cy="24" r="1.8" fill="#453E39"/><path d="M21 30q3 3 3 0 0 3 3 0" fill="none"/>' },
+  { id: 'fish', ko: '물고기', en: 'Fish', svg: '<path d="M34 24l10-9v18z" fill="#80C6ED"/><ellipse cx="21" cy="24" rx="15" ry="10" fill="#80C6ED"/><circle cx="14" cy="21" r="1.8" fill="#453E39"/><path d="M24 17q4 7 0 14" fill="none"/>' },
+  { id: 'apple', ko: '사과', en: 'Apple', svg: '<path d="M24 16c-8-5-17 0-16 11 1 9 7 15 12 14 2 0 3-1 4-1s2 1 4 1c5 1 11-5 12-14 1-11-8-16-16-11Z" fill="#E5413A"/><path d="M24 16c0-4 1-7 4-9" fill="none"/><path d="M28 9c4-3 8-2 9 0-3 3-7 3-9 0Z" fill="#75C768"/>' },
+  { id: 'icecream', ko: '아이스크림', en: 'Ice cream', svg: '<path d="M15 24l9 20 9-20Z" fill="#F2C48B"/><circle cx="24" cy="18" r="11" fill="#ED6CA6"/><circle cx="24" cy="6" r="2.5" fill="#E5413A"/>' },
+  { id: 'rocket', ko: '로켓', en: 'Rocket', svg: '<path d="M16 26l-7 8h8M32 26l7 8h-8" fill="#E5413A"/><path d="M20 32l4 12 4-12Z" fill="#FFC92B"/><path d="M24 4c8 6 10 16 8 28H16C14 20 16 10 24 4Z" fill="#fff"/><circle cx="24" cy="18" r="4.5" fill="#80C6ED"/>' },
+  { id: 'house', ko: '우리 집', en: 'House', svg: '<path d="M10 22h28v20H10Z" fill="#FFF3C4"/><path d="M5 23L24 6l19 17Z" fill="#E5413A"/><path d="M20 42V30h8v12" fill="#9A6B4F"/>' },
+  { id: 'tree', ko: '나무', en: 'Tree', svg: '<path d="M21 28h6v16h-6Z" fill="#9A6B4F"/><circle cx="24" cy="19" r="14" fill="#75C768"/><circle cx="18" cy="16" r="2.2" fill="#E5413A" stroke="none"/><circle cx="29" cy="22" r="2.2" fill="#E5413A" stroke="none"/>' },
+  { id: 'moon', ko: '달님', en: 'Moon', svg: '<path d="M32 6A19 19 0 1 0 42 32 15 15 0 0 1 32 6Z" fill="#FFE07A"/>' },
+  { id: 'balloon', ko: '풍선', en: 'Balloon', svg: '<ellipse cx="24" cy="19" rx="12" ry="14" fill="#3168E8"/><path d="M22 33h4l-2 3ZM24 36q-4 4 0 9" fill="none"/>' },
+  { id: 'umbrella', ko: '우산', en: 'Umbrella', svg: '<path d="M5 24a19 19 0 0 1 38 0Z" fill="#FFC92B"/><path d="M24 24v15a4 4 0 0 1-8 0M24 5V3" fill="none"/>' },
+  { id: 'cake', ko: '케이크', en: 'Cake', svg: '<path d="M9 26h30v16H9Z" fill="#FFE4D9"/><path d="M9 26q5 6 10 0 5 6 10 0 5 6 10 0M24 26V15" fill="none"/><path d="M24 7q4 4 0 7-4-3 0-7Z" fill="#FFC92B"/>' },
+  { id: 'car', ko: '자동차', en: 'Car', svg: '<path d="M5 34V26l7-2 5-9h14l5 9 7 2v8Z" fill="#75C768"/><path d="M17 24h14" fill="none"/><circle cx="15" cy="35" r="5" fill="#fff"/><circle cx="33" cy="35" r="5" fill="#fff"/>' },
+  { id: 'ball', ko: '공', en: 'Ball', svg: '<circle cx="24" cy="24" r="17" fill="#fff"/><path d="M24 7q-12 17 0 34 12-17 0-34Z" fill="#80C6ED"/><path d="M7 24h34" fill="none"/>' },
+  { id: 'crown', gold: 1, ko: '왕관', en: 'Crown', svg: '<path d="M7 36L5 14l10 9 9-14 9 14 10-9-2 22Z" fill="#FFC92B"/><path d="M7 41h34" fill="none"/>' },
+  { id: 'medal', gold: 1, ko: '메달', en: 'Medal', svg: '<path d="M16 4l8 14 8-14" fill="none" stroke="#3168E8" stroke-width="5"/><circle cx="24" cy="30" r="13" fill="#FFC92B"/><path d="M24 23l2.2 4.5 5 .7-3.6 3.5.8 5-4.4-2.4-4.4 2.4.8-5-3.6-3.5 5-.7z" fill="#fff"/>' },
+  { id: 'trophy', gold: 1, ko: '트로피', en: 'Trophy', svg: '<path d="M14 10H7q0 9 8 10M34 10h7q0 9-8 10M24 28v8" fill="none"/><path d="M14 6h20v12a10 10 0 0 1-20 0Z" fill="#FFC92B"/><path d="M15 42h18l-2-6H17Z" fill="#FFC92B"/>' },
+  { id: 'gem', gold: 1, ko: '보석', en: 'Gem', svg: '<path d="M12 8h24l8 11-20 23L4 19Z" fill="#80C6ED"/><path d="M4 19h40M17 8l-3 11 10 23 10-23-3-11" fill="none"/>' }
+];
+const NORMALS = STICKERS.filter((x) => !x.gold), BOARD = 10;
+const stk = (id) => STICKERS.find((x) => x.id === id);
+const stkSVG = (x) => `<svg viewBox="0 0 48 48" fill="none" stroke="#453E39" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${x.svg}</svg>`;
+const stkHTML = (x, cls = '') => { const n = S.rw.stickers[x.id] || 0; return `<div class="stk ${x.gold ? 'gold' : ''} ${cls}" role="img" aria-label="${lab(x)} ${T('스티커', 'sticker')}">${stkSVG(x)}${n > 1 && !cls ? `<span class="n">×${n}</span>` : ''}</div>`; };
+const STAMP = '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="#FFF7F5" stroke="#E5413A" stroke-width="3"/><circle cx="24" cy="24" r="15.5" fill="none" stroke="#E5413A" stroke-width="1" stroke-dasharray="2 4"/><path d="M24 12l3.5 7.3 8 1.1-5.8 5.6 1.4 7.9L24 30.1l-7.1 3.8 1.4-7.9-5.8-5.6 8-1.1z" fill="#FFC92B" stroke="#E5413A" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+const GIFT = '<svg width="132" height="132" viewBox="0 0 96 96" fill="none" stroke="#453E39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="14" y="42" width="68" height="44" rx="6" fill="#ED6CA6"/><rect x="8" y="28" width="80" height="18" rx="6" fill="#FF8768"/><path d="M43 28h10v58H43Z" fill="#FFC92B"/><path d="M48 28c-10-18-28-12-20-2 4 4 12 3 20 2Zm0 0c10-18 28-12 20-2-4 4-12 3-20 2Z" fill="#FFC92B"/></svg>';
+const ICON_CAM = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+const dayAdd = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return ymd(d); };
+const stampInfo = () => { const ds = new Set(S.entries.map((e) => e.date)), n = ds.size; let k = ds.has(today()) ? today() : dayAdd(today(), -1), streak = 0; while (ds.has(k)) { streak++; k = dayAdd(k, -1); } return { n, cur: n ? ((n - 1) % BOARD) + 1 : 0, streak }; };
+const stampsHTML = (cur, fresh = 0) => `<div class="stamps" role="img" aria-label="${T(`도장 ${cur}개, 모두 ${BOARD}칸`, `${cur} of ${BOARD} stamps`)}">${Array.from({ length: BOARD }, (_, i) => (i < cur ? `<span class="stamp on ${i + 1 === fresh ? 'new' : ''}">${STAMP}</span>` : `<span class="stamp ${i + 1 === BOARD ? 'goal' : ''}">${i + 1 === BOARD ? T('선물', 'Gift') : i + 1}</span>`)).join('')}</div>`;
+const haveN = () => NORMALS.filter((x) => S.rw.stickers[x.id]).length;
+const posterOK = () => haveN() === NORMALS.length;
+const saveRw = () => DB.set('rewards', S.rw).catch(() => {});
+const award = (gold) => { const pool = STICKERS.filter((x) => !!x.gold === gold), fresh = pool.filter((x) => !S.rw.stickers[x.id]), from = fresh.length ? fresh : pool, x = from[Math.floor(Math.random() * from.length)]; S.rw.stickers[x.id] = (S.rw.stickers[x.id] || 0) + 1; return x.id; };
+const SNAP_MAX = 3;
+const snapsEdit = (list) => `<div class="snaps">${list.map((p, i) => `<div class="snap"><img src="${p}" alt="${T('오늘의 찰칵', "Today's snap")} ${i + 1}"><button class="x" data-a="snapDel" data-v="${i}" aria-label="${T('사진 빼기', 'Remove photo')}">×</button></div>`).join('')}${list.length < SNAP_MAX ? `<button class="snap add" data-a="snapAdd">${ICON_CAM.replace('width="16" height="16"', 'width="28" height="28"')}<span>${T('사진 올리기', 'Add photo')}</span></button>` : ''}</div>`;
+
 // ---------- 공통 조각 ----------
 const steps = (n) => { const L = [T('그림', 'Draw'), T('이야기', 'Story'), T('정보', 'Info'), T('완성', 'Done')]; return `<div class="steps" aria-label="${T('진행 단계', 'Progress')} ${n}/4">${L.map((x, i) => `<div class="${i + 1 < n ? 'done' : i + 1 === n ? 'on' : ''}">${x}${i + 1 < n ? ' ✓' : ''}</div>`).join('')}</div>`; };
 const top = (title, back, right = '<span style="width:44px"></span>') => `<div class="topbar"><button class="iconbtn" data-a="${back}" aria-label="${T('뒤로', 'Back')}">${ICON.back}</button><div class="t">${title}</div>${right}</div>`;
 const tabbar = () => `<nav class="tabbar" aria-label="${T('주요 메뉴', 'Main menu')}">${[['home', T('홈', 'Home'), ICON.home], ['diary', T('일기장', 'Diary'), ICON.cal], ['book', T('그림책', 'Art Book'), ICON.book], ['me', T('내 정보', 'Me'), ICON.me]].map(([id, l, ic]) => `<button data-a="tab" data-v="${id}" class="${S.tab === id ? 'on' : ''}"${S.tab === id ? ' aria-current="page"' : ''}>${ic}${l}</button>`).join('')}</nav>`;
-const card = (e) => `<button class="entry-card" data-a="open" data-v="${e.id}"><img class="thumb" src="${e.drawing}" alt=""><div class="meta"><div class="ttl">${esc(e.title)}</div><div class="mute" style="font-size:12px">${fmtDate(e.date)}</div></div></button>`;
-const sheet = (e, orig) => { const w = wOf(e.weather), m = mOf(e.mood); return `<article class="sheet"><div class="meta"><b style="color:var(--ink)">${fmtDate(e.date)}</b>${w ? `<span>${lab(w)}</span>` : ''}${m ? `<span>${lab(m)}</span>` : ''}</div><h3>${esc(e.title)}</h3><img class="draw" src="${orig && e.drawingOriginal ? e.drawingOriginal : e.drawing}" alt="${T('아이 그림', "Child's drawing")}">${e.handwriting ? `<img src="${e.handwriting}" alt="${T('아이 손글씨', 'Handwriting')}" style="width:100%">` : ''}${e.text ? `<p class="txt">${esc(e.text)}</p>` : ''}${e.note ? `<div class="note"><b>${T('부모님 코멘트', "Parent's Note")}</b>${esc(e.note)}</div>` : ''}</article>`; };
+const card = (e) => `<button class="entry-card" data-a="open" data-v="${e.id}"><img class="thumb" src="${e.drawing}" alt="">${(e.photos || []).length ? `<span class="snapbadge" aria-label="${T('사진 있음', 'Has photos')}">${ICON_CAM}</span>` : ''}<div class="meta"><div class="ttl">${esc(e.title)}</div><div class="mute" style="font-size:12px">${fmtDate(e.date)}</div></div></button>`;
+const sheet = (e, orig) => { const w = wOf(e.weather), m = mOf(e.mood); return `<article class="sheet"><div class="meta"><b style="color:var(--ink)">${fmtDate(e.date)}</b>${w ? `<span>${lab(w)}</span>` : ''}${m ? `<span>${lab(m)}</span>` : ''}</div><h3>${esc(e.title)}</h3><img class="draw" src="${orig && e.drawingOriginal ? e.drawingOriginal : e.drawing}" alt="${T('아이 그림', "Child's drawing")}">${e.handwriting ? `<img src="${e.handwriting}" alt="${T('아이 손글씨', 'Handwriting')}" style="width:100%">` : ''}${e.text ? `<p class="txt">${esc(e.text)}</p>` : ''}${e.note ? `<div class="note"><b>${T('부모님 코멘트', "Parent's Note")}</b>${esc(e.note)}</div>` : ''}${(e.photos || []).length ? `<div class="snapsec"><b>${ICON_CAM}${T('오늘의 찰칵', "Today's Snap")}</b><div class="snapview n${e.photos.length}">${e.photos.map((p, i) => `<button data-a="snapOpen" data-v="${i}" aria-label="${T('사진 크게 보기', 'View photo')} ${i + 1}"><img src="${p}" alt=""></button>`).join('')}</div></div>` : ''}</article>`; };
 
 // ---------- 화면 ----------
 const V = {};
@@ -160,6 +206,7 @@ V.home = () => {
   <div class="row" style="gap:6px"><img src="assets/mascot.png" alt="" style="width:140px;height:120px;object-fit:contain"><h1 class="title" style="font-size:31px">${T('오늘 너의 마음엔<br>어떤 그림이<br>피었니?', 'What bloomed<br>in your heart<br>today?')}</h1></div>
   <button class="btn big" data-a="write">${ICON.pen}${T('오늘의 그림일기 쓰기', "Write Today's Diary")}</button>
   ${S.draft ? `<button class="list-row" data-a="resume" style="border-style:dashed;text-align:left"><span class="grow col" style="gap:2px"><b style="font-size:15px">${T('쓰던 일기 이어서 하기', 'Continue your draft')}</b><span class="mute" style="font-size:12px">${T('자동으로 저장해 뒀어요', 'Saved automatically')}</span></span>${ICON.next}</button>` : ''}
+  ${(() => { const si = stampInfo(); return `<button class="card stampcard" data-a="rewards"><span class="row between"><b class="hand" style="font-size:24px">${T('칭찬 도장판', 'My Stamp Board')}</b><span class="row" style="gap:6px">${si.streak > 1 ? `<span class="pill">${T(`${si.streak}일 연속`, `${si.streak}-day streak`)}</span>` : ''}<span class="pill dark">${si.cur} / ${BOARD}</span></span></span>${stampsHTML(si.cur)}<span class="row between" style="font-size:13px;color:var(--sub);gap:8px"><span>${S.rw.promise ? T(`다 모으면 · ${esc(S.rw.promise)}`, `Fill it for · ${esc(S.rw.promise)}`) : T('일기를 쓰면 도장 하나, 스티커 하나!', 'One stamp and one sticker per diary day!')}</span><span style="white-space:nowrap;font-weight:600;color:var(--cobalt-d)">${T(`스티커 ${haveN()}/${NORMALS.length}`, `Stickers ${haveN()}/${NORMALS.length}`)}</span></span></button>`; })()}
   <div class="banner"><span class="grow col" style="gap:2px"><b style="font-size:15px">${T(`이번 달 ${days}일 썼어요`, `${days} days this month`)} <span class="mute">/ ${total}</span></b><span style="font-size:12px;color:var(--sub)">${T('빠짐없이 쓰면 그림책 최대 30% 할인', 'Write every day for up to 30% off your book')}</span></span><div style="width:64px;height:8px;border-radius:4px;background:#fff;overflow:hidden"><div style="height:100%;width:${Math.round((days / total) * 100)}%;background:var(--green)"></div></div></div>
   <div class="row between" style="margin-top:4px"><h2 class="title" style="font-size:24px">${T('최근 그림일기', 'Recent diaries')}</h2><button class="btn text" data-a="tab" data-v="diary">${T('전체보기', 'See all')}</button></div>
   ${rec.length ? `<div class="grid2">${rec.map(card).join('')}</div>` : `<p class="mute card" style="padding:20px;text-align:center;line-height:1.6">${T('아직 그림일기가 없어요.<br>첫 번째 이야기를 그려 볼까요?', 'No diaries yet.<br>Shall we draw the first story?')}</p>`}
@@ -228,7 +275,8 @@ V.write = () => {
   if (s === 'note') return `<main>${top(T('그림일기 쓰기', 'Write a Diary'), 'toInfo')}${steps(4)}
     <h1 class="title">${T('부모님 코멘트', "Parent's Note")}</h1>
     ${S.parentOK ? `<label class="field">${T('아이에게 남기는 한마디 (선택)', 'A few words for your child (optional)')}<textarea data-m="note" maxlength="150" style="height:150px;font-family:var(--book)" placeholder="${T('작은 꽃도 놓치지 않고 바라보는 네 마음이 참 예뻐.', 'I love how you notice even the smallest flowers.')}">${esc(d.note)}</textarea><span class="mute" style="font-weight:400;font-size:12px">${T('150자까지 · 이 날짜 페이지 아래쪽에 들어가요', 'Up to 150 characters · shown on this day’s page')}</span></label>
-      <div class="list-row" style="padding:14px 16px"><span class="grow" style="font-size:15px;font-weight:600">${T('그림책 페이지에 함께 싣기', 'Include in the art book')}</span><button class="switch ${d.noteInBook ? 'on' : ''}" role="switch" aria-checked="${d.noteInBook}" data-a="noteInBook" aria-label="${T('그림책에 싣기', 'Include in book')}"></button></div>`
+      <div class="list-row" style="padding:14px 16px"><span class="grow" style="font-size:15px;font-weight:600">${T('그림책 페이지에 함께 싣기', 'Include in the art book')}</span><button class="switch ${d.noteInBook ? 'on' : ''}" role="switch" aria-checked="${d.noteInBook}" data-a="noteInBook" aria-label="${T('그림책에 싣기', 'Include in book')}"></button></div>
+      <div class="field">${T('오늘의 찰칵 (선택)', "Today's Snap (optional)")}<span class="mute" style="font-weight:400;font-size:12px">${T('그림 속 그날의 진짜 사진을 3장까지 함께 남겨요. 일기장에서 그림과 같이 볼 수 있어요.', 'Keep up to 3 real photos from the day. They show next to the drawing in the diary.')}</span>${snapsEdit(d.photos || [])}</div>`
       : `<p style="font-size:16px;line-height:1.7;color:var(--sub)">${T('부모님이 응원 한마디를 남길 수 있어요. 아이 혼자 쓰고 있다면 건너뛰어도 괜찮아요.', 'A parent can leave a short note. If your child is writing alone, you can skip this.')}</p><button class="btn line" data-a="gateNote">${T('부모님 확인하고 코멘트 쓰기', 'Parent check & write a note')}</button>`}
     <span class="grow"></span><button class="btn big" data-a="finish">${T('그림일기 완성하기', 'Finish My Diary')}</button></main>`;
   return '';
@@ -242,10 +290,54 @@ V.detail = () => {
       ${e.drawingOriginal ? `<button class="btn ghost" data-a="toggleOrig">${S.showOriginal ? T('보정본 보기', 'Show adjusted') : T('원본 그림 보기', 'Show original')}</button>` : ''}
       <button class="btn ghost" data-a="download">${T('그림 저장', 'Save picture')}</button>
       <button class="btn ghost" data-a="editNote">${e.note ? T('코멘트 고치기', 'Edit note') : T('부모님 코멘트 쓰기', 'Add parent note')}</button>
+      ${(e.photos || []).length < SNAP_MAX ? `<button class="btn ghost" data-a="snapAdd">${ICON_CAM}${T('오늘의 찰칵 올리기', "Add Today's Snap")}</button>` : ''}
       <button class="btn ghost" data-a="askDelete" style="color:#B23A3A">${T('일기 삭제', 'Delete')}</button>
     </div>
     <span class="grow"></span><button class="btn dark" data-a="closeDetail">${S.justDone ? T('홈으로', 'Home') : T('닫기', 'Close')}</button></main>`;
 };
+V.reward = () => {
+  const r = S.reward; if (!r) return V.home();
+  const si = stampInfo(), k = stk(r.sticker), g = r.gold && stk(r.gold);
+  return `<main style="align-items:center;text-align:center;gap:16px">
+    <img src="assets/mascot.png" alt="" style="width:104px;margin-top:8px">
+    <h1 class="title" style="font-size:40px">${T('참 잘했어요!', 'Great job!')}</h1>
+    <p style="font-size:16px;color:var(--sub)">${T(`도장 ${si.cur}개째예요`, `Stamp number ${si.cur}`)}${si.streak > 1 ? T(` · ${si.streak}일 연속!`, ` · ${si.streak} days in a row!`) : ''}</p>
+    <div class="card" style="padding:16px;width:100%">${stampsHTML(si.cur, si.cur)}</div>
+    ${r.opened ? `<div class="col pop" style="align-items:center;gap:8px;width:100%"><div class="row" style="gap:14px;justify-content:center">${stkHTML(k, 'big')}${g ? stkHTML(g, 'big') : ''}</div>
+      <b class="hand" style="font-size:28px">${T(`${lab(k)} 스티커를 받았어요!`, `You got the ${lab(k)} sticker!`)}</b>
+      ${g ? `<span style="font-size:15px;color:var(--sub)">${T(`도장판을 다 채워서 황금 ${lab(g)} 스티커도 받았어요!`, `You filled the board, so here is a golden ${lab(g)} sticker too!`)}</span>` : ''}
+      ${g && S.rw.promise ? `<div class="banner col" style="background:#FFF6D6;align-items:center;gap:2px;width:100%"><span class="mute">${T('약속 선물', 'Promised gift')}</span><b class="hand" style="font-size:26px">${esc(S.rw.promise)}</b><span class="mute">${T('엄마 아빠에게 보여 주세요', 'Show this to Mom or Dad')}</span></div>` : ''}
+      ${r.poster ? `<div class="banner col" style="background:#F1F5FF;align-items:center;gap:2px;width:100%"><b style="font-size:16px">${T('스티커북을 다 모았어요!', 'Sticker book complete!')}</b><span style="font-size:14px;color:var(--sub)">${T('내 그림 포스터 선물권이 생겼어요', 'You earned a poster of your own drawing')}</span></div>` : ''}</div>`
+      : `<button class="gift" data-a="giftOpen">${GIFT}<b class="hand" style="font-size:26px">${T('선물 상자를 눌러 봐!', 'Tap the gift box!')}</b></button>`}
+    <span class="grow"></span>
+    ${r.opened ? `<button class="btn big" data-a="rewardDone" style="width:100%">${T('내 일기 보기', 'See my diary')}</button><button class="btn text" data-a="rewards">${T('스티커북 보기', 'Open sticker book')}</button>` : `<button class="btn text" data-a="rewardDone">${T('건너뛰기', 'Skip')}</button>`}</main>`;
+};
+V.rewards = () => {
+  const si = stampInfo(), have = haveN(), pe = S.rw.poster && S.entries.find((e) => e.id === S.rw.poster);
+  return `<main>${top(T('칭찬 도장판', 'My Stamp Board'), 'closeRewards')}
+    <div class="card col" style="padding:16px;gap:12px">
+      <div class="row between"><b class="title" style="font-size:26px">${T(`도장 ${si.cur} / ${BOARD}`, `Stamps ${si.cur} / ${BOARD}`)}</b>${si.streak > 1 ? `<span class="pill">${T(`${si.streak}일 연속`, `${si.streak}-day streak`)}</span>` : ''}</div>
+      ${stampsHTML(si.cur)}
+      <p class="mute" style="line-height:1.6">${T(`하루에 일기 한 편을 쓰면 도장 하나! 지금까지 모두 ${si.n}개 모았어요.`, `One stamp for each day you write. ${si.n} so far.`)}</p>
+    </div>
+    <div class="card col" style="padding:16px;gap:6px;background:#FFF6D6;border-color:#FFE9A3">
+      <span class="mute">${T('도장 10개를 다 모으면 · 약속 선물', 'When the board is full · promised gift')}</span>
+      <b class="hand" style="font-size:26px;line-height:1.3">${S.rw.promise ? esc(S.rw.promise) : T('아직 정하지 않았어요', 'Not set yet')}</b>
+      <button class="btn ghost" data-a="promiseEdit" style="margin-top:6px">${S.rw.promise ? T('약속 선물 바꾸기 (부모님)', 'Change the gift (parent)') : T('약속 선물 정하기 (부모님)', 'Set a gift (parent)')}</button>
+    </div>
+    <div class="row between" style="margin-top:4px"><h2 class="title" style="font-size:26px">${T('스티커북', 'Sticker Book')}</h2><span class="pill dark">${have} / ${NORMALS.length}</span></div>
+    <div class="stkgrid">${NORMALS.map((x) => (S.rw.stickers[x.id] ? stkHTML(x) : `<div class="stk off" role="img" aria-label="${T('아직 못 받은 스티커', 'Not collected yet')}">?</div>`)).join('')}</div>
+    <div class="row between" style="margin-top:4px"><h3 class="title" style="font-size:22px">${T('황금 스티커', 'Golden stickers')}</h3><span class="mute">${T('도장판을 다 채우면 한 장', 'One per full board')}</span></div>
+    <div class="stkgrid">${STICKERS.filter((x) => x.gold).map((x) => (S.rw.stickers[x.id] ? stkHTML(x) : `<div class="stk off gold" role="img" aria-label="${T('아직 못 받은 스티커', 'Not collected yet')}">?</div>`)).join('')}</div>
+    <div class="card col" style="padding:16px;gap:10px;background:#F1F5FF;border-color:#D5E0FB">
+      <b style="font-size:16px">${T('내 그림 포스터', 'My drawing as a poster')}</b>
+      ${posterOK() ? `<span style="font-size:14px;line-height:1.6;color:var(--sub)">${T('스티커북을 다 모았어요! 포스터로 만들 그림을 하나 골라 주세요. 실물 그림책을 주문하면 함께 보내 드려요.', 'Sticker book complete! Pick one drawing for your poster. It ships with your printed art book.')}</span>${pe ? `<div class="poster"><img src="${pe.drawing}" alt="${esc(pe.title)}"><span class="hand">${esc(pe.title)}</span></div>` : ''}<button class="btn" data-a="posterPick" style="height:52px;font-size:16px">${pe ? T('다른 그림으로 바꾸기', 'Choose another drawing') : T('포스터 그림 고르기', 'Choose my poster drawing')}</button>`
+        : `<span style="font-size:14px;line-height:1.6;color:var(--sub)">${T(`스티커 ${NORMALS.length}장을 다 모으면, 내가 고른 그림 하나를 포스터로 만들어 그림책과 함께 보내 드려요.`, `Collect all ${NORMALS.length} stickers and we’ll print one drawing you choose as a poster, shipped with your art book.`)}</span><div class="bar"><i style="width:${Math.round((have / NORMALS.length) * 100)}%"></i></div><span class="mute">${T(`앞으로 ${NORMALS.length - have}장`, `${NORMALS.length - have} to go`)}</span>`}
+    </div></main>`;
+};
+V.poster = () => `<main>${top(T('포스터 그림 고르기', 'Choose a drawing'), 'rewards')}
+  <p style="font-size:15px;line-height:1.6;color:var(--sub)">${T('포스터로 크게 걸어 두고 싶은 그림을 하나 골라요.', 'Pick the drawing you’d love to hang on your wall.')}</p>
+  <div class="grid2">${sorted().map((e) => `<button class="entry-card" data-a="posterSet" data-v="${e.id}" style="${S.rw.poster === e.id ? 'outline:3px solid var(--cobalt);border-color:transparent' : ''}" aria-pressed="${S.rw.poster === e.id}"><img class="thumb" src="${e.drawing}" alt=""><div class="meta"><div class="ttl">${esc(e.title)}</div><div class="mute" style="font-size:12px">${fmtDate(e.date)}</div></div></button>`).join('')}</div></main>`;
 V.diary = () => {
   const cal = S.diaryMode === 'cal';
   let body;
@@ -304,6 +396,7 @@ V.book = () => {
       <div class="spread-wrap"><div class="spread" id="spread" data-n="${cur.length}">${cur.map((i) => pages[i]).join('')}</div>
         <div class="row"><button class="iconbtn" data-a="sp" data-v="-1" style="background:#fff" aria-label="${T('이전', 'Previous')}" ${b.spread ? '' : 'disabled'}>${ICON.back}</button><b style="font-size:14px;min-width:110px;text-align:center">${label}</b><button class="iconbtn" data-a="sp" data-v="1" style="background:#fff" aria-label="${T('다음', 'Next')}" ${b.spread < spreads.length - 1 ? '' : 'disabled'}>${ICON.next}</button></div></div>
       <p class="mute" style="font-size:13px;line-height:1.6">${T('210 × 210mm 정사각 · 재단 여백 3mm 포함 · 표지 + ' + en.length + '페이지 + 뒷표지', '210 × 210mm square · 3mm bleed · cover + ' + en.length + ' pages + back')}</p>
+      ${posterOK() ? `<p class="banner" style="background:#F1F5FF;font-size:14px;line-height:1.6">${T('스티커북을 다 모았어요! 실물 그림책 주문이 열리면 고른 그림 포스터를 함께 보내 드려요.', 'Sticker book complete! When printed books open, your chosen poster ships with the book.')}</p>` : ''}
       <button class="btn big" data-a="pdf">${T('인쇄용 PDF 만들기', 'Make print-ready PDF')}</button>
       <p class="mute" style="font-size:12px;line-height:1.6">${PREVIEW ? T('미리보기에서는 페이지를 이미지로 묶은 PDF가 저장돼요. 인쇄소용 고품질 PDF는 GitHub에 올린 주소에서 만들어 주세요.', 'This preview saves an image-based PDF. Make the print-quality PDF on the hosted site.') : T('인쇄 창이 열리면 “PDF로 저장”을 선택하세요. 여백은 “없음”, 배경 그래픽은 켜 주세요.', 'In the print dialog choose “Save as PDF”, set margins to “None” and turn on background graphics.')}</p></main>`;
 };
@@ -311,13 +404,15 @@ V.me = () => `<main><h1 class="title">${T('내 정보', 'Me')}</h1>
   <label class="field">${T('아이 이름 (그림책 제목에 쓰여요)', "Child's name (used in the book title)")}<input data-k="child" value="${esc(S.child)}" maxlength="12" placeholder="${T('예: 이재', 'e.g. Ejae')}"></label>
   <div class="field">${T('언어', 'Language')}<div class="seg"><button class="${S.lang === 'ko' ? 'on' : ''}" data-a="lang" data-v="ko">한국어</button><button class="${S.lang === 'en' ? 'on' : ''}" data-a="lang" data-v="en">English</button></div></div>
   <div class="card col" style="padding:16px;gap:10px"><b>${T('부모님 영역', 'Parent area')}</b>
+    <button class="btn ghost" data-a="promiseEdit">${T('도장판 약속 선물 정하기', 'Set the stamp-board gift')}</button>
     <button class="btn ghost" data-a="export">${T('모든 일기 내려받기 (백업 파일)', 'Download all diaries (backup)')}</button>
     <label class="btn ghost">${T('백업 파일 불러오기', 'Restore from backup')}<input type="file" accept="application/json,.json" data-f="import" hidden></label>
     <button class="btn ghost" data-a="seed">${T('샘플 일기 5편 넣어 보기', 'Add 5 sample diaries')}</button>
     <button class="btn ghost" data-a="askWipe" style="color:#B23A3A">${T('모든 일기 삭제', 'Delete all diaries')}</button></div>
   <div class="card col" style="padding:16px;gap:6px;font-size:13px;line-height:1.7;color:var(--sub)"><b style="color:var(--ink);font-size:15px">${T('베타 버전 안내', 'About this beta')}</b>
-    <span>· ${T('이 베타 버전은 회원 가입이 없고, 일기는 이 기기의 브라우저에만 저장돼요.', 'This beta has no sign-up. Diaries are stored only in this browser on this device.')}</span>
-    <span>· ${T('위시버니 주식회사의 서버로 전송되거나 저장되는 일기는 없어요.', 'No diary is sent to or stored on WishBunny Inc. servers.')}</span>
+    <span>· ${T('이 베타 버전은 회원 가입이 없고, 일기와 사진(오늘의 찰칵)은 이 기기의 브라우저에만 저장돼요.', 'This beta has no sign-up. Diaries and photos (Today’s Snap) are stored only in this browser on this device.')}</span>
+    <span>· ${T('위시버니 주식회사의 서버로 전송되거나 저장되는 일기와 사진은 없어요.', 'No diary or photo is sent to or stored on WishBunny Inc. servers.')}</span>
+    <span>· ${T('포스터 선물은 실물 그림책 주문이 열리면 함께 보내 드릴 예정이에요.', 'Poster gifts will ship once printed book orders open.')}</span>
     <span>· ${T('말로 쓰기를 쓰면 목소리가 브라우저 회사의 음성 인식 서비스로 전송될 수 있어요.', 'When you use Speak, your voice may be sent to the browser maker’s speech recognition service.')}</span>
     <span>· ${T('접속 기록은 호스팅 업체에 남을 수 있어요.', 'Access logs may be kept by the hosting provider.')}</span>
     <span>· ${T('브라우저 기록을 지우면 일기도 지워지니 백업 파일을 받아 두세요.', 'Clearing browser data deletes your diaries, so please download a backup.')}</span>
@@ -330,6 +425,8 @@ function modalHTML() {
   if (m.type === 'gate') return `<div class="modal" role="dialog" aria-modal="true" aria-label="${T('부모님 확인', 'Parent check')}"><div class="box"><b class="title" style="font-size:26px">${T('부모님 확인', 'Parent check')}</b><p style="font-size:15px;color:var(--sub)">${T('부모님만 할 수 있는 일이에요. 답을 적어 주세요.', 'This is for parents. Please answer.')}</p><label class="field">${m.a} × ${m.b} = ?<input id="gate" inputmode="numeric" autocomplete="off"></label><div class="grid2"><button class="btn ghost" data-a="closeModal">${T('취소', 'Cancel')}</button><button class="btn" data-a="gateOK" style="height:48px;font-size:15px">${T('확인', 'OK')}</button></div></div></div>`;
   if (m.type === 'confirm') return `<div class="modal${S.land === 'rot' ? ' rot' : ''}" role="alertdialog" aria-modal="true"><div class="box"><b style="font-size:18px;line-height:1.5">${m.msg}</b><div class="grid2"><button class="btn ghost" data-a="closeModal">${T('취소', 'Cancel')}</button><button class="btn danger" data-a="confirmOK" style="height:48px;font-size:15px">${m.ok}</button></div></div></div>`;
   if (m.type === 'note') return `<div class="modal" role="dialog" aria-modal="true"><div class="box"><b class="title" style="font-size:26px">${T('부모님 코멘트', "Parent's Note")}</b><label class="field"><span class="mute" style="font-weight:400">${T('150자까지', 'Up to 150 characters')}</span><textarea id="noteEdit" maxlength="150" style="height:140px;font-family:var(--book)">${esc(m.val)}</textarea></label><div class="grid2"><button class="btn ghost" data-a="closeModal">${T('취소', 'Cancel')}</button><button class="btn" data-a="noteSave" style="height:48px;font-size:15px">${T('저장', 'Save')}</button></div></div></div>`;
+  if (m.type === 'promise') return `<div class="modal" role="dialog" aria-modal="true"><div class="box"><b class="title" style="font-size:26px">${T('약속 선물', 'Promised gift')}</b><label class="field"><span class="mute" style="font-weight:400;line-height:1.6">${T('도장 10개를 다 모으면 아이와 함께할 약속을 적어 주세요. 물건보다 함께하는 시간이 좋아요.', 'What will you do together when the board is full? Time together works better than things.')}</span><input id="promiseEdit" maxlength="24" value="${esc(m.val)}" placeholder="${T('예: 아빠랑 놀이터 가기', 'e.g. A trip to the playground')}"></label><div class="grid2"><button class="btn ghost" data-a="closeModal">${T('취소', 'Cancel')}</button><button class="btn" data-a="promiseSave" style="height:48px;font-size:15px">${T('저장', 'Save')}</button></div></div></div>`;
+  if (m.type === 'photo') { const e = S.entries.find((x) => x.id === S.detailId), p = e && (e.photos || [])[m.i]; if (!p) return ''; return `<div class="modal" role="dialog" aria-modal="true" aria-label="${T('오늘의 찰칵', "Today's Snap")}"><div class="box" style="max-width:520px;padding:14px"><img src="${p}" alt="" style="width:100%;max-height:68vh;object-fit:contain;border-radius:14px;background:#fff"><div class="grid2"><button class="btn ghost" data-a="snapDel" data-v="${m.i}" style="color:#B23A3A">${T('이 사진 빼기', 'Remove photo')}</button><button class="btn dark" data-a="closeModal" style="height:48px;font-size:15px">${T('닫기', 'Close')}</button></div></div></div>`; }
   return '';
 }
 const gate = (then) => { if (S.parentOK) return then(); S.modal = { type: 'gate', a: 6 + Math.floor(Math.random() * 4), b: 6 + Math.floor(Math.random() * 4), then }; render(); const g = $('#gate'); if (g) g.focus(); };
@@ -408,6 +505,13 @@ function drawUp(max) { const v = $('#upv'); if (!v || !S.up || !S.up.img) return
 function loadImage(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
 const whiten = (im) => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0); return c.toDataURL('image/png'); };
 const readFile = (f, as = 'readAsDataURL') => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r[as](f); });
+// 오늘의 찰칵: 부모님이 고른 사진을 긴 변 1600px JPEG로 줄여 일기와 함께 저장합니다.
+function pickPhotos(max, cb) {
+  document.querySelectorAll('input[data-tmp]').forEach((x) => x.remove());
+  const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.multiple = max > 1; i.hidden = true; i.dataset.tmp = '1'; document.body.appendChild(i);
+  i.onchange = async () => { const out = []; for (const f of [...i.files].slice(0, max)) { try { out.push(adjust(await loadImage(await readFile(f)), { rot: 0, br: 100, ct: 100 }, 1600).toDataURL('image/jpeg', 0.85)); } catch (_) {} } i.remove(); if (out.length) cb(out); else toast(T('사진을 열지 못했어요', 'Could not open that photo')); };
+  i.click();
+}
 
 // ---------- 음성 ----------
 let rec = null;
@@ -460,9 +564,31 @@ const A = {
   gateNote() { gate(() => render()); },
   noteInBook() { S.draft.noteInBook = !S.draft.noteInBook; saveDraft(); render(); },
   async finish() {
-    const d = S.draft, e = { id: d.id, date: d.date, title: d.title.trim(), weather: d.weather, mood: d.mood, drawing: d.drawing, drawingOriginal: d.drawingOriginal || null, drawingSource: d.drawingSource, strokes: d.strokes || null, text: d.textSource === 'handwriting' ? '' : d.text.trim(), transcript: d.textSource === 'voice' ? d.text.trim() : '', textSource: d.textSource, handwriting: d.textSource === 'handwriting' ? d.handwriting : null, note: (d.note || '').trim(), noteInBook: d.noteInBook, lang: S.lang, createdAt: Date.now(), updatedAt: Date.now() };
+    const d = S.draft, e = { id: d.id, date: d.date, title: d.title.trim(), weather: d.weather, mood: d.mood, drawing: d.drawing, drawingOriginal: d.drawingOriginal || null, drawingSource: d.drawingSource, strokes: d.strokes || null, text: d.textSource === 'handwriting' ? '' : d.text.trim(), transcript: d.textSource === 'voice' ? d.text.trim() : '', textSource: d.textSource, handwriting: d.textSource === 'handwriting' ? d.handwriting : null, note: (d.note || '').trim(), noteInBook: d.noteInBook, photos: d.photos || [], lang: S.lang, createdAt: Date.now(), updatedAt: Date.now() };
+    const newDay = !S.entries.some((x) => x.date === e.date), hadPoster = posterOK();
     try { await DB.put(e); await DB.set('draft', null); } catch (_) { return toast(T('저장하지 못했어요. 저장 공간을 확인해 주세요.', 'Could not save. Please check storage space.')); }
-    S.entries.push(e); S.draft = null; S.book = null; S.detailId = e.id; S.justDone = true; S.showOriginal = false; S.view = 'detail'; render(); window.scrollTo(0, 0);
+    S.entries.push(e); S.draft = null; S.book = null; S.detailId = e.id; S.justDone = true; S.showOriginal = false; S.view = 'detail';
+    if (newDay) { const sticker = award(false), gold = stampInfo().cur === BOARD ? award(true) : null; S.reward = { sticker, gold, poster: !hadPoster && posterOK(), opened: false }; saveRw(); S.view = 'reward'; }
+    render(); window.scrollTo(0, 0);
+  },
+  giftOpen() { S.reward.opened = true; render(); },
+  rewardDone() { S.reward = null; S.view = 'detail'; render(); window.scrollTo(0, 0); },
+  rewards() { if (S.view !== 'poster') S.rwBack = S.view === 'reward' ? 'reward' : null; S.view = 'rewards'; render(); window.scrollTo(0, 0); },
+  closeRewards() { S.view = S.rwBack; S.rwBack = null; render(); window.scrollTo(0, 0); },
+  promiseEdit() { gate(() => { S.modal = { type: 'promise', val: S.rw.promise || '' }; render(); const n = $('#promiseEdit'); if (n) n.focus(); }); },
+  promiseSave() { S.rw.promise = $('#promiseEdit').value.trim(); saveRw(); S.modal = null; render(); toast(T('약속 선물을 저장했어요', 'Gift saved')); },
+  posterPick() { if (!S.entries.length) return; S.view = 'poster'; render(); window.scrollTo(0, 0); },
+  posterSet(el) { S.rw.poster = el.dataset.v; saveRw(); S.view = 'rewards'; render(); window.scrollTo(0, 0); toast(T('포스터 그림을 골랐어요', 'Poster drawing chosen')); },
+  snapAdd() {
+    const inDraft = S.view === 'write';
+    gate(() => { const t = inDraft ? S.draft : S.entries.find((x) => x.id === S.detailId); if (!t) return; const left = SNAP_MAX - (t.photos || []).length; if (left < 1) return;
+      pickPhotos(left, async (list) => { t.photos = (t.photos || []).concat(list).slice(0, SNAP_MAX); if (inDraft) saveDraft(); else { t.updatedAt = Date.now(); try { await DB.put(t); } catch (_) { toast(T('저장하지 못했어요. 저장 공간을 확인해 주세요.', 'Could not save. Please check storage space.')); } } render(); }); });
+  },
+  snapOpen(el) { S.modal = { type: 'photo', i: Number(el.dataset.v) }; render(); },
+  snapDel(el) {
+    const i = Number(el.dataset.v);
+    if (S.view === 'write') { S.draft.photos.splice(i, 1); saveDraft(); return render(); }
+    gate(async () => { const e = S.entries.find((x) => x.id === S.detailId); e.photos.splice(i, 1); e.updatedAt = Date.now(); await DB.put(e); S.modal = null; render(); toast(T('사진을 뺐어요', 'Photo removed')); });
   },
   open(el) { S.detailId = el.dataset.v; S.justDone = false; S.showOriginal = false; S.view = 'detail'; render(); window.scrollTo(0, 0); },
   closeDetail() { S.view = null; if (S.justDone) S.tab = 'home'; S.justDone = false; render(); },
@@ -470,7 +596,7 @@ const A = {
   download() { const e = S.entries.find((x) => x.id === S.detailId), d = S.showOriginal && e.drawingOriginal ? e.drawingOriginal : e.drawing; saveFile(`kkomji-${e.date}.${d.startsWith('data:image/png') ? 'png' : 'jpg'}`, d); },
   editNote() { gate(() => { const e = S.entries.find((x) => x.id === S.detailId); S.modal = { type: 'note', val: e.note || '' }; render(); const n = $('#noteEdit'); if (n) n.focus(); }); },
   async noteSave() { const e = S.entries.find((x) => x.id === S.detailId); e.note = $('#noteEdit').value.trim(); e.updatedAt = Date.now(); await DB.put(e); S.modal = null; render(); toast(T('코멘트를 저장했어요', 'Note saved')); },
-  askDelete() { gate(() => confirmBox(T('이 일기를 삭제할까요? 되돌릴 수 없어요.', 'Delete this diary? This cannot be undone.'), T('삭제', 'Delete'), async () => { await DB.del(S.detailId); S.entries = S.entries.filter((x) => x.id !== S.detailId); S.book = null; S.view = null; })); },
+  askDelete() { gate(() => confirmBox(T('이 일기를 삭제할까요? 되돌릴 수 없어요.', 'Delete this diary? This cannot be undone.'), T('삭제', 'Delete'), async () => { await DB.del(S.detailId); S.entries = S.entries.filter((x) => x.id !== S.detailId); if (S.rw.poster === S.detailId) { S.rw.poster = null; saveRw(); } S.book = null; S.view = null; })); },
   dmode(el) { S.diaryMode = el.dataset.v; render(); }, season(el) { S.season = el.dataset.v; render(); },
   ym(el) { const [y, m] = S.ym.split('-').map(Number), d = new Date(y, m - 1 + Number(el.dataset.v), 1); S.ym = d.getFullYear() + '-' + pad(d.getMonth() + 1); render(); },
   bookHome() { S.view = null; S.tab = 'home'; render(); }, bookPrev() { S.book.step--; render(); window.scrollTo(0, 0); },
@@ -494,12 +620,12 @@ const A = {
     box.remove(); S.busy = false;
   },
   lang(el) { S.lang = el.dataset.v; DB.set('lang', S.lang); S.book = null; render(); },
-  export() { gate(() => { render(); saveFile(`kkomji-backup-${today()}.json`, new Blob([JSON.stringify({ app: 'kkomji-diary', v: 1, child: S.child, entries: S.entries })], { type: 'application/json' })); }); },
+  export() { gate(() => { render(); saveFile(`kkomji-backup-${today()}.json`, new Blob([JSON.stringify({ app: 'kkomji-diary', v: 1, child: S.child, rewards: S.rw, entries: S.entries })], { type: 'application/json' })); }); },
   async seed() {
     const smp = [['2026-04-12', '꽃밭', 'Flower Garden', 'sunny', 'happy', 'drawing-flowers-cover.png', '꽃들이 나한테 인사하는 것 같았어요.', 'The flowers looked like they were saying hi.', ''], ['2026-04-18', '비 오는 날 노란 우산', 'Yellow Umbrella in the Rain', 'rain', 'ok', 'drawing-rain.png', '우산에서 빗소리가 노래했어요.', 'The rain sang on my umbrella.', ''], ['2026-04-22', '우리 집 앞에 핀 꽃', 'Flowers in Front of My House', 'sunny', 'excited', 'drawing-flowers-real.png', '오늘 우리 집 앞에서 예쁜 꽃을 봤어요.\n빨간 꽃도 있고 노란 꽃도 있었어요.', 'Today I saw pretty flowers in front of my house.\nThere were red ones and yellow ones.', '작은 꽃도 놓치지 않고 바라보는 네 마음이 참 예뻐. 오늘의 봄을 오래 기억하자.'], ['2026-04-23', '수영을 했어요', 'I Went Swimming', 'sunny', 'happy', 'drawing-swim.png', '아빠랑 수영장에 갔어요.\n물이 차가웠는데 발차기를 열 번이나 했어요!', 'I went to the pool with Dad.\nThe water was cold, but I kicked ten times!', ''], ['2026-04-26', '할머니 집에 갔어요', "Grandma's House", 'sunny', 'happy', 'drawing-house.png', '할머니 집 나무에 빨간 열매가 있었어요.', "There were red berries on Grandma's tree.", '']];
     try { for (const [date, ko, en, w, m, f, tk, te, note] of smp) { const blob = await (await fetch('assets/' + f)).blob(), url = await readFile(blob); const im = await loadImage(url); const e = { id: 'sample-' + date, date, title: T(ko, en), weather: w, mood: m, drawing: whiten(im), drawingOriginal: null, drawingSource: 'upload', text: T(tk, te), transcript: '', textSource: 'typed', handwriting: null, note: S.lang === 'en' && note ? 'I love how you notice even the smallest flowers.' : note, noteInBook: true, lang: S.lang, createdAt: Date.now(), updatedAt: Date.now(), sample: true }; await DB.put(e); S.entries = S.entries.filter((x) => x.id !== e.id).concat(e); } S.book = null; S.ym = '2026-04'; render(); toast(T('샘플 일기를 넣었어요', 'Sample diaries added')); } catch (_) { toast(T('샘플을 불러오지 못했어요', 'Could not load samples')); }
   },
-  askWipe() { gate(() => confirmBox(T('모든 일기를 삭제할까요? 되돌릴 수 없어요.', 'Delete ALL diaries? This cannot be undone.'), T('모두 삭제', 'Delete all'), async () => { await DB.clear(); S.entries = []; S.book = null; })); },
+  askWipe() { gate(() => confirmBox(T('모든 일기를 삭제할까요? 되돌릴 수 없어요.', 'Delete ALL diaries? This cannot be undone.'), T('모두 삭제', 'Delete all'), async () => { await DB.clear(); S.entries = []; S.book = null; S.rw.stickers = {}; S.rw.poster = null; saveRw(); })); },
   closeModal() { S.modal = null; render(); },
   gateOK() { const m = S.modal; if (Number($('#gate').value) === m.a * m.b) { S.parentOK = true; S.modal = null; m.then(); if (!S.modal) render(); } else { toast(T('답이 달라요. 다시 해 볼까요?', 'Not quite. Try again?')); $('#gate').value = ''; $('#gate').focus(); } },
   async confirmOK() { const m = S.modal; S.modal = null; await m.then(); render(); }
@@ -520,7 +646,7 @@ document.addEventListener('change', async (ev) => {
   if (el.dataset.b === 'from' || el.dataset.b === 'to') { const b = S.book; if (el.value) b[el.dataset.b] = el.value; if (b.from > b.to) b.to = b.from; b.sel = new Set(S.entries.filter((e) => e.date >= b.from && e.date <= b.to).map((e) => e.id)); render(); }
   if (el.dataset.c) { el.checked ? S.book.sel.add(el.dataset.c) : S.book.sel.delete(el.dataset.c); render(); }
   if (el.dataset.f === 'pick' && el.files[0]) { try { const img = await loadImage(await readFile(el.files[0])); S.up = { img, rot: 0, br: 100, ct: 100 }; S.draft.step = 'upload'; render(); } catch (_) { toast(T('사진을 열지 못했어요', 'Could not open that photo')); } }
-  if (el.dataset.f === 'import' && el.files[0]) { gate(async () => { try { const j = JSON.parse(await readFile(el.files[0], 'readAsText')); if (j.app !== 'kkomji-diary' || !Array.isArray(j.entries)) throw 0; for (const e of j.entries) await DB.put(e); S.entries = await DB.all(); if (j.child && !S.child) { S.child = j.child; DB.set('child', S.child); } S.book = null; render(); toast(T(`${j.entries.length}편을 불러왔어요`, `${j.entries.length} diaries restored`)); } catch (_) { toast(T('백업 파일을 읽지 못했어요', 'Could not read the backup file')); } }); }
+  if (el.dataset.f === 'import' && el.files[0]) { gate(async () => { try { const j = JSON.parse(await readFile(el.files[0], 'readAsText')); if (j.app !== 'kkomji-diary' || !Array.isArray(j.entries)) throw 0; for (const e of j.entries) await DB.put(e); S.entries = await DB.all(); if (j.child && !S.child) { S.child = j.child; DB.set('child', S.child); } if (j.rewards && j.rewards.stickers && !Object.keys(S.rw.stickers).length) { S.rw = { stickers: j.rewards.stickers, promise: S.rw.promise || j.rewards.promise || '', poster: j.rewards.poster || null }; saveRw(); } S.book = null; render(); toast(T(`${j.entries.length}편을 불러왔어요`, `${j.entries.length} diaries restored`)); } catch (_) { toast(T('백업 파일을 읽지 못했어요', 'Could not read the backup file')); } }); }
 });
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && ev.target.id === 'gate') A.gateOK(); if (ev.key === 'Escape' && S.modal) A.closeModal(); });
 
@@ -532,6 +658,7 @@ document.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && ev.targ
     S.lang = (await DB.get('lang')) || ((navigator.language || 'ko').startsWith('ko') ? 'ko' : 'en');
     S.child = (await DB.get('child')) || '';
     S.aiStyle = (await DB.get('aiStyle')) || 'kid'; if (!STYLES.some((x) => x.id === S.aiStyle)) S.aiStyle = 'kid';
+    const rw = await DB.get('rewards'); if (rw && rw.stickers) S.rw = { stickers: rw.stickers, promise: rw.promise || '', poster: rw.poster || null };
     const d = await DB.get('draft'); if (d && d.id) S.draft = d;
   } catch (_) { toast('이 화면에서는 일기가 창을 닫으면 사라져요.'); }
   const latest = sorted()[0]; S.ym = (latest ? latest.date : today()).slice(0, 7);

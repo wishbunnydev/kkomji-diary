@@ -126,3 +126,46 @@ canvas.paper{width:100%;height:auto;background:#fff;border-radius:14px;touch-act
 .lsizes .sizebtn{width:34px;height:44px}
 .lhist .iconbtn{width:34px;height:44px;border:none;background:transparent}
 .modal.rot .box{transform:rotate(90deg)}
+.pill{height:26px;padding:0 10px;border-radius:999px;background:#FFE4DB;color:#A8452A;font-size:12px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap}
+.pill.dark{background:var(--ink);color:#fff}
+.stampcard{padding:14px 16px;text-align:left;display:flex;flex-direction:column;gap:10px;width:100%}
+.stamps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.stamp{aspect-ratio:1;border-radius:50%;border:2px dashed #D6CCBE;background:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--hand);font-size:20px;font-weight:700;color:#8A8078}
+.stamp.goal{border-color:var(--yellow);background:#FFF6D6;color:#7A6000;font-size:16px}
+.stamp.on{border:none;background:transparent}
+.stamp.on svg{width:100%;height:100%;transform:rotate(-8deg)}
+.stamp.new svg{animation:kk-stamp .55s cubic-bezier(.2,1.5,.4,1) .15s both}
+@keyframes kk-stamp{from{transform:scale(2.6) rotate(12deg);opacity:0}to{transform:scale(1) rotate(-8deg);opacity:1}}
+.stkgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stk{aspect-ratio:1;border-radius:22%;background:#fff;border:1px solid var(--line);box-shadow:0 3px 8px rgba(69,62,57,.1);display:flex;align-items:center;justify-content:center;position:relative}
+.stk svg{width:70%;height:70%}
+.stk.gold{background:#FFF6D6;border:2px solid var(--yellow)}
+.stk.off{background:var(--paper);box-shadow:none;border:2px dashed #D6CCBE;font-family:var(--hand);font-size:26px;font-weight:700;color:#8A8078}
+.stk.big{width:132px;flex:none;box-shadow:0 10px 24px rgba(69,62,57,.16);transform:rotate(-4deg)}
+.stk.big+.stk.big{transform:rotate(5deg)}
+.stk .n{position:absolute;right:-5px;top:-5px;min-width:26px;height:22px;padding:0 5px;border-radius:999px;background:var(--cobalt);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.gift{border:none;background:transparent;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 24px}
+.gift svg{animation:kk-wiggle 1.6s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes kk-wiggle{0%,60%,100%{transform:rotate(0)}70%{transform:rotate(-7deg)}80%{transform:rotate(7deg)}90%{transform:rotate(-4deg)}}
+.pop{animation:kk-pop .5s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes kk-pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+.bar{height:10px;border-radius:5px;background:#fff;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--cobalt);border-radius:5px}
+.poster{align-self:center;width:150px;background:#fff;padding:10px 10px 8px;border-radius:4px;box-shadow:0 10px 22px rgba(69,62,57,.2);display:flex;flex-direction:column;gap:4px;text-align:center;transform:rotate(-2deg)}
+.poster img{width:100%;aspect-ratio:3/4;object-fit:cover}
+.poster span{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.snaps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font-weight:400}
+.snap{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff}
+.snap img{width:100%;height:100%;object-fit:cover;display:block}
+.snap .x{position:absolute;top:4px;right:4px;width:36px;height:36px;border-radius:50%;border:none;background:rgba(69,62,57,.78);color:#fff;font-size:20px;line-height:1}
+.snap.add{border:2px dashed #D6CCBE;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:var(--sub)}
+.snapsec{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px}
+.snapsec b{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--mute)}
+.snapview{display:grid;gap:6px}
+.snapview.n2{grid-template-columns:repeat(2,minmax(0,1fr))}.snapview.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.snapview button{border:none;padding:0;background:transparent;border-radius:12px;overflow:hidden;display:block}
+.snapview img{width:100%;display:block;object-fit:cover;aspect-ratio:1}
+.snapview.n1 img{aspect-ratio:auto;max-height:320px}
+.entry-card{position:relative}
+.snapbadge{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.92);color:var(--ink);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(69,62,57,.2)}
+@media (prefers-reduced-motion:reduce){.stamp.new svg,.gift svg,.pop{animation:none}}
